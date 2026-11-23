@@ -290,20 +290,11 @@ html[data-motion='reduce'] .challenge__globe::before { display: none; }
   margin-top: var(--s-10);
 }
 
-.past__head {
-  display: grid;
-  gap: var(--s-3);
-  margin-bottom: var(--s-6);
-}
-
-.past__lead {
-  color: var(--ink-2);
-}
-
 .past__grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--grid-gap);
+  margin-top: var(--s-6);
 }
 
 .past__grid > li:first-child img {
@@ -312,14 +303,11 @@ html[data-motion='reduce'] .challenge__globe::before { display: none; }
 
 .boat-gallery__title {
   font-size: clamp(1.75rem, 1.35rem + 1.4vw, 2.625rem);
+  text-align: center;
 }
 
 .current-boats {
   margin-top: var(--s-9);
-}
-
-.current-boats > .boat-gallery__title {
-  text-align: center;
 }
 
 .current-boats__grid {
@@ -341,6 +329,15 @@ html[data-motion='reduce'] .challenge__globe::before { display: none; }
   background: #000;
   color: var(--ink);
   font-size: clamp(1rem, 0.85rem + 0.8vw, 1.5rem);
+}
+
+.current-boats__placeholder .tile__media {
+  opacity: 0.36;
+}
+
+.current-boats__status {
+  position: relative;
+  z-index: 1;
 }
 
 /* --- 04 team ---------------------------------------------------------------- */
@@ -1081,10 +1078,9 @@ html[data-motion='reduce'] .challenge__globe::before { display: none; }
     display: flex;
     gap: var(--s-4);
     margin-inline: calc(-1 * var(--gutter));
-    padding-inline: var(--gutter);
+    padding-inline: 11%;
     overflow-x: auto;
     scroll-snap-type: x mandatory;
-    scroll-padding-inline: var(--gutter);
     scrollbar-width: none;
   }
 
@@ -1093,8 +1089,8 @@ html[data-motion='reduce'] .challenge__globe::before { display: none; }
   }
 
   .past__grid > li {
-    flex: 0 0 78%;
-    scroll-snap-align: start;
+    flex: 0 0 100%;
+    scroll-snap-align: center;
   }
 
 }

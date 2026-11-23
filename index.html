@@ -286,12 +286,7 @@
 
         <div class="container">
           <section class="past" id="lineage" aria-labelledby="previous-boats-title">
-            <div class="past__head" data-reveal>
-              <h3 class="h3 boat-gallery__title" id="previous-boats-title">Previous boats</h3>
-              <p class="small past__lead">
-                A record of the prototypes that shaped the current boat.
-              </p>
-            </div>
+            <h3 class="h3 boat-gallery__title" id="previous-boats-title" data-reveal>Previous boats</h3>
             <ul class="past__grid" data-past data-reveal-group></ul>
           </section>
           <section class="current-boats" aria-labelledby="current-boats-title">
@@ -304,7 +299,10 @@
                 <figcaption class="tile__caption"><span class="tile__caption-title">Prototype 04</span></figcaption>
               </figure>
               <figure class="tile current-boats__tile current-boats__placeholder">
-                <span>coming soon...</span>
+                <div class="tile__media">
+                  <img src="%BASE_URL%images/prototypes/final-boat-teaser.jpg" alt="" width="1144" height="1375" loading="lazy" decoding="async" />
+                </div>
+                <span class="current-boats__status">coming soon...</span>
                 <figcaption class="tile__caption"><span class="tile__caption-title">Final Boat</span></figcaption>
               </figure>
             </div>
