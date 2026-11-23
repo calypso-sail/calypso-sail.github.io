@@ -330,7 +330,7 @@
   stroke: rgba(227, 249, 65, 0.4);
 }
 
-/* the two servo sliders */
+/* the two actuator sliders */
 
 .sliders {
   flex: 1 1 auto;

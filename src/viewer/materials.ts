@@ -1,19 +1,4 @@
-/**
- * Reinterprets the Fusion materials as things that exist in the world.
- *
- * The export carries nine materials, all with metalness left unset (so glTF defaults
- * them to fully metallic), all double-sided, all at the same roughness. That is a CAD
- * colour scheme, not a description of a boat, so every primitive gets a new material
- * here, chosen by (part id, source material name).
- *
- * Keying on the source *name* is not incidental: four of the nine materials — `Clear`,
- * `Glossy - Black`, `Steel - Polished` and `Black` — are byte-identical apart from that
- * name, so it's the only thing separating the housings from the tail spar. The asset
- * pipeline dedups with keepUniqueNames for exactly this reason.
- *
- * Every primitive also gets its *own* material instance, which is what lets a view dim
- * the parts it isn't talking about without touching the parts it is.
- */
+/** Physical finishes, chapter highlights and the Electronics cutaway. */
 
 import {
   AdditiveBlending,
@@ -35,101 +20,39 @@ import {
 } from '../config/parts.js'
 import type { LoadedModel } from './model.js'
 
-export const ACCENT = 0xe3f941
-
 type Spec = MeshPhysicalMaterialParameters
 
-/** Default reading of each Fusion material. */
+/** Reinterprets the named CAD finishes for the viewer's lighting. */
 const BY_SOURCE: Record<string, Spec> = {
-  // Deck, hatches, rudder stock, tail vane. A warm off-white gel coat, not paper —
-  // and kept well off pure white, because a big flat deck under a hard key clips first.
-  White: {
-    color: 0xd6d3ca,
-    roughness: 0.35,
-    metalness: 0,
-    clearcoat: 0.5,
-    clearcoatRoughness: 0.2,
-  },
-  // Hull topsides. Glossy brand yellow — this is the colour doing most of the work.
-  'Blue - Wall Paint - Glossy': {
-    color: ACCENT,
-    envMapIntensity: 0.25,
+  'Paint - Gloss, white': { color: 0xd6d3ca, roughness: 0.35, clearcoat: 0.5 },
+  'Paint - Gloss, optic yellow': {
+    color: 0xe3f941,
     specularIntensity: 0.25,
     roughness: 0.48,
-    metalness: 0,
     clearcoat: 0.15,
-    clearcoatRoughness: 0.4,
   },
-  // The wing. Satin rather than glossy, so it reads as a different construction to
-  // the hull instead of a second piece of the same moulding.
-  'Blue - Wall Paint - Glossy.001': {
-    color: ACCENT,
-    envMapIntensity: 0.25,
-    specularIntensity: 0.2,
-    roughness: 0.6,
-    metalness: 0,
-    clearcoat: 0.1,
-    clearcoatRoughness: 0.3,
-  },
-  // Wing frame, counterweights, panel cell fields.
-  'Glossy - Black': {
-    color: 0x14171c,
-    roughness: 0.38,
-    metalness: 0.25,
-    clearcoat: 0.3,
-    clearcoatRoughness: 0.25,
-  },
-  // The tail spar. The one genuinely metal thing on the boat.
-  'Steel - Polished': { color: 0xb6bcc5, roughness: 0.24, metalness: 1 },
-  // The two electronics bays.
-  Clear: {
-    color: 0xe4e6dc,
-    roughness: 0.08,
-    metalness: 0,
-    clearcoat: 1,
-    clearcoatRoughness: 0.04,
-    transparent: true,
-    opacity: 0.3,
-    depthWrite: false,
-    emissive: 0xa4aa8d,
-    emissiveIntensity: 0,
-  },
-  // Panel frames and backsheets.
-  'Cool White': { color: 0xd2d7de, roughness: 0.46, metalness: 0.06, clearcoat: 0.3 },
-  // The underside cell surfaces (hidden — see model.ts).
-  Black: { color: 0x090d17, roughness: 0.28, metalness: 0.1 },
-  // A 0.5 mm leftover face between the rudder stock and the blade. Reading it as a
-  // bearing seal is more honest than leaving a pink disc on the boat.
-  Pink: { color: 0x101216, roughness: 0.55, metalness: 0.2 },
+  'Carbon fibre, woven, gloss': { color: 0x41474e, roughness: 0.38, clearcoat: 0.3 },
+  'Lead - Satin': { color: 0x777c86, roughness: 0.53, metalness: 0.65 },
+  'Aluminium, hard anodised': { color: 0x838b95, roughness: 0.35, metalness: 0.8 },
+  'Stainless Steel - Satin': { color: 0xb6bcc5, roughness: 0.32, metalness: 0.88 },
+  'Plastic - Matte (Black)': { color: 0x363b44, roughness: 0.55 },
+  'Plastic - Matte (White)': { color: 0xd2d7de, roughness: 0.46 },
+  'RAL 7035 light grey': { color: 0xbec3be, roughness: 0.44 },
 }
 
-/** Monocrystalline cell laminate: nearly black, but blue and mirror-like at a glance. */
 const CELL: Spec = {
-  color: 0x0a1024,
-  roughness: 0.22,
-  metalness: 0.15,
-  clearcoat: 1,
-  clearcoatRoughness: 0.06,
-  emissive: 0x0d2a4d,
+  color: 0x101b32,
+  roughness: 0.26,
+  clearcoat: 0.65,
+  clearcoatRoughness: 0.12,
+  emissive: 0x193e68,
   emissiveIntensity: 0,
 }
 
-/**
- * Overrides, most specific first. `parts` empty means "any part".
- * This is where a re-exported model with tidier materials would need the least work.
- */
-const OVERRIDES: { parts: PartId[]; source?: string; spec: Spec }[] = [
-  // The active cell area of all three arrays comes through as `Glossy - Black`.
-  { parts: ['solarMain', 'solarAft', 'solarBow'], source: 'Glossy - Black', spec: CELL },
-]
-
 function specFor(part: PartId, source: string): Spec {
-  for (const rule of OVERRIDES) {
-    if (rule.parts.length && !rule.parts.includes(part)) continue
-    if (rule.source && rule.source !== source) continue
-    return rule.spec
-  }
-  return BY_SOURCE[source] ?? { color: 0x8892a0, roughness: 0.5, metalness: 0.1 }
+  if (part === 'solarCells') return CELL
+  if (part === 'wing') return { ...BY_SOURCE[source], roughness: 0.6 }
+  return BY_SOURCE[source] ?? { color: 0x8892a0, roughness: 0.5 }
 }
 
 // ---------------------------------------------------------------------------
@@ -213,15 +136,11 @@ interface Slot {
   baseOpacity: number
   baseClearcoat: number
   baseRoughness: number
-  /** Some parts ship hidden (see model.ts); fading must never bring them back. */
-  baseVisible: boolean
   /** Fades out and is replaced by a fresnel shell during x-ray. */
   isShell: boolean
   /** Small enough that a shell would be noise; just fades away during x-ray. */
   isFaded: boolean
-  /** Lifts and glows during x-ray. */
-  isBay: boolean
-  /** Solar cell laminate; picks up a little glow when the arrays are the subject. */
+  /** Solar cell laminate; picks up a little glow when the panel is the subject. */
   isCell: boolean
   /** 0 = full attention, 1 = pushed into the background. */
   dim: number
@@ -262,9 +181,8 @@ export function createMaterials(model: LoadedModel): MaterialSystem {
       const spec = specFor(part, source)
 
       const material = new MeshPhysicalMaterial({
-        // The export marks everything double-sided; winding is consistent across all 28
-        // primitives, so single-sided is both correct and half the fragment work.
-        side: FrontSide,
+        // Solar cells are a surface. The backing sheet covers them from below.
+        side: spec === CELL ? DoubleSide : FrontSide,
         envMapIntensity: 1,
         ...spec,
       })
@@ -275,9 +193,9 @@ export function createMaterials(model: LoadedModel): MaterialSystem {
       else old?.dispose()
       mesh.material = material
 
-      const isBay = baySet.has(part)
-      if (isBay) {
-        mesh.renderOrder = 5
+      if (baySet.has(part)) {
+        // The near-transparent hull shouldn't leave the electronics in its shadow.
+        mesh.receiveShadow = false
         mesh.castShadow = false
       }
 
@@ -289,10 +207,8 @@ export function createMaterials(model: LoadedModel): MaterialSystem {
         baseOpacity: material.opacity,
         baseClearcoat: material.clearcoat,
         baseRoughness: material.roughness,
-        baseVisible: mesh.visible && model.parts[part].visible,
         isShell: shellSet.has(part),
         isFaded: fadedSet.has(part),
-        isBay,
         isCell: spec === CELL,
         dim: 0,
         dimTarget: 0,
@@ -367,11 +283,8 @@ export function createMaterials(model: LoadedModel): MaterialSystem {
           slot.material.transparent = xray > 0.002
           slot.material.depthWrite = xray < 0.5
           slot.material.opacity = opacity
-          slot.mesh.visible = slot.baseVisible && opacity > 0.02
+          slot.mesh.visible = opacity > 0.02
           slot.mesh.castShadow = xray < 0.5
-        } else if (slot.isBay) {
-          slot.material.opacity = slot.baseOpacity + (0.62 - slot.baseOpacity) * xray
-          slot.material.emissiveIntensity = 0.45 * xray
         } else if (slot.isCell) {
           slot.material.emissiveIntensity = cellGlow * 0.3
         }

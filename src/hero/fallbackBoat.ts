@@ -15,7 +15,7 @@ import {
   WebGLRenderer,
 } from 'three'
 import { createGhostMaterial } from '../viewer/materials.js'
-import { fetchModel } from '../viewer/model.js'
+import { fetchHeroBoatMeshes } from './boatMeshes.js'
 
 export async function mountFallbackBoat(hero: HTMLElement): Promise<void> {
   const host = document.createElement('div')
@@ -48,7 +48,7 @@ export async function mountFallbackBoat(hero: HTMLElement): Promise<void> {
     key.position.set(-2.6, 4.2, 3)
     scene.add(key)
 
-    const { rest } = await fetchModel()
+    const rest = await fetchHeroBoatMeshes()
     if (disposed) return
 
     const material = createGhostMaterial(0xe3f941, 0.88, { body: 0.34 })

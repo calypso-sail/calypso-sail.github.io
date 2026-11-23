@@ -15,7 +15,7 @@
 import type { BufferGeometry, Group, Object3D } from 'three'
 import { Matrix4, Mesh } from 'three'
 import { GLTFLoader, type GLTF } from 'three/addons/loaders/GLTFLoader.js'
-import { PART_IDS, SOLAR_CELLS, type PartId } from '../config/parts.js'
+import { PART_IDS, type PartId } from '../config/parts.js'
 
 export interface LoadedModel {
   /** The glTF scene root. Nothing ever transforms this — the rig hangs its pivots here. */
@@ -41,7 +41,7 @@ export interface FetchedModel {
   readonly rest: readonly RestMesh[]
 }
 
-const MODEL_URL = `${import.meta.env.BASE_URL}${new URLSearchParams(location.search).get('qa') === 'model-error' ? 'missing-model.glb' : 'boat.opt.glb'}`
+const MODEL_URL = `${import.meta.env.BASE_URL}${new URLSearchParams(location.search).get('qa') === 'model-error' ? 'missing-model.glb' : 'boat.opt.glb?v=calypso'}`
 
 let pending: Promise<FetchedModel> | null = null
 const progressListeners = new Set<(fraction: number) => void>()
@@ -85,10 +85,8 @@ export function fetchModel(onProgress?: (fraction: number) => void): Promise<Fet
 
       root.updateMatrixWorld(true)
 
-      const hidden = new Set<PartId>(SOLAR_CELLS)
       const rest: RestMesh[] = []
       for (const id of PART_IDS) {
-        if (hidden.has(id)) continue
         parts[id].traverse((o) => {
           const mesh = o as Mesh
           if (!mesh.isMesh) return
@@ -111,21 +109,10 @@ export async function loadModel(onProgress?: (fraction: number) => void): Promis
     const mesh = object as Mesh
     mesh.castShadow = true
     mesh.receiveShadow = true
-    // The parts are 2 m of boat, not a scene — culling per-object buys nothing and
+    // The parts move and frame together, so culling per-object buys little and
     // costs a bounding-sphere test per frame per part.
     mesh.frustumCulled = false
   }
-
-  /**
-   * The eight `solarCellN` bodies are Fusion surface artifacts: they sit on the *under*
-   * side of the panel plate, exactly coplanar with its bottom face, so they z-fight when
-   * you orbit under the boat and they are invisible from every angle where they'd help.
-   * The cell field you actually see is solarMain's `Glossy - Black` primitive.
-   *
-   * They stay in the file, and stay addressable as parts, so label anchors can hang off
-   * them and a future export that fixes the geometry needs no code change here.
-   */
-  for (const id of SOLAR_CELLS) parts[id].visible = false
 
   return {
     root,

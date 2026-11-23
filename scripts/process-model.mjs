@@ -1,12 +1,11 @@
 /**
  * boat.glb  ->  public/boat.opt.glb
  *
- * Reads the pristine Fusion export read-only and writes an optimised, semantically
+ * Reads the supplied CAD export and writes an optimised, semantically
  * named copy. Two contracts this script must never break:
  *
- *   1. It is POSE-PRESERVING. Every joint axis in src/config/joints.ts is a world
- *      coordinate measured in the source file, so no centering, no re-orienting.
- *      The verify pass at the bottom re-opens the output and enforces this.
+ *   1. Convert the export to the viewer's frame once, then preserve that pose
+ *      through optimisation. Joint coordinates are in the viewer's frame.
  *
  *   2. Every part listed in RULES gets a stable id as its node name, and every mesh
  *      node in the file is claimed by exactly one rule. A future Fusion re-export
@@ -22,8 +21,8 @@ import { join } from 'node:path'
 import { NodeIO, PropertyType } from '@gltf-transform/core'
 import { KHRONOS_EXTENSIONS } from '@gltf-transform/extensions'
 import { dedup, flatten, prune, weld, quantize } from '@gltf-transform/functions'
+import { Matrix4 } from 'three'
 
-// The project path contains a space; new URL()/fileURLToPath is the only safe way here.
 const ROOT = join(fileURLToPath(new URL('.', import.meta.url)), '..')
 const SRC = join(ROOT, 'boat.glb')
 const OUT_DIR = join(ROOT, 'public')
@@ -36,55 +35,47 @@ const POSE_TOLERANCE = 0.001
 // Part map
 // ---------------------------------------------------------------------------
 
-/**
- * Fusion names every mesh-bearing node `BodyN.xxx`; the meaningful names live on the
- * group nodes above them — exactly the nodes flatten() + prune() delete. So we resolve
- * and apply ids BEFORE flattening.
- *
- * `group` matches the normalised name of a mesh node's nearest non-`Body*` ancestor.
- * Where one group holds several parts, `where` narrows by measured world position, and
- * `count` asserts how many nodes the rule must claim.
- */
-const RULES = [
-  { id: 'hull', group: 'hull' },
-  { id: 'hallSensor', group: 'hall_sensor' },
-
-  // Wing assembly — all of these rotate together about the mast axis.
-  { id: 'wing', group: 'sail' },
-  { id: 'wingFrame', group: 'sail_skeleton' },
-  { id: 'counterweightUpper', group: 'sail_weight', where: (b) => b.center[1] > 0.6 },
-  { id: 'counterweightLower', group: 'sail_weight', where: (b) => b.center[1] <= 0.6 },
-  { id: 'tailVane', group: 'tail' },
-
-  { id: 'rudder', group: 'rudder' },
-
-  // Twins, told apart by where they sit along the hull (+X is aft).
-  { id: 'hatchMain', group: 'hatch', where: (b) => b.center[0] < 0.5 },
-  { id: 'hatchAft', group: 'hatch', where: (b) => b.center[0] >= 0.5 },
-  { id: 'housingFwd', group: 'housing', where: (b) => b.center[0] < 0.35 },
-  { id: 'housingAft', group: 'housing', where: (b) => b.center[0] >= 0.35 },
-
-  { id: 'solarBow', group: 'solar3' },
-  { id: 'solarAft', group: 'solar2' },
-  // solar1 is a base panel plus eight discrete 125 mm cells, all siblings.
-  { id: 'solarMain', group: 'solar1', where: (_b, n) => /^body1\b/.test(norm(n)) },
-  {
-    id: (i) => `solarCell${i + 1}`,
-    group: 'solar1',
-    where: (_b, n) => /^body[2-9]\b/.test(norm(n)),
-    count: 8,
-  },
-]
-
-/** lowercase; drop Fusion's `:N` instance, `.001` copy and ` (1)` occurrence suffixes. */
-function norm(name) {
-  return String(name)
-    .toLowerCase()
-    .replace(/:\d+$/, '')
-    .replace(/\.\d+$/, '')
-    .replace(/\s*\(\d+\)\s*$/, '')
-    .trim()
+const RULES = {
+  hull: 'Hull',
+  deck: 'Deck',
+  ballast: 'Bulb',
+  keel: 'Keel fin',
+  wing: 'Wing',
+  mast: 'Mast',
+  counterweight: 'Counterweight',
+  boomForward: 'Boom forward',
+  boomHubLower: 'Boom hub lower',
+  boomHubUpper: 'Boom hub upper',
+  boomTailLower: 'Boom tail lower',
+  boomTailUpper: 'Boom tail upper',
+  tailPin: 'Tail pin',
+  tailFittingLower: 'Tail pivot fitting lower',
+  tailFittingUpper: 'Tail pivot fitting upper',
+  tailVane: 'Tail vane',
+  tailBushLower: 'Tail bush lower',
+  tailBushUpper: 'Tail bush upper',
+  tailWasherLower: 'Tail thrust washer lower',
+  tailWasherUpper: 'Tail thrust washer upper',
+  rudderBlade: 'Rudder blade',
+  rudderStock: 'Rudder stock',
+  solarCells: 'Solar cells',
+  solarJunction: 'Solar junction box',
+  solarBacking: 'Solar panel back sheet',
+  electronicsBox: 'Electronics box',
+  electronicsLid: 'Electronics box lid',
+  battery1: 'Battery 1',
+  battery2: 'Battery 2',
+  battery3: 'Battery 3',
 }
+
+// The Blender export's world axes are X forward, Y to port, Z up. Set +X aft,
+// +Y up, length near the centre, and the design waterline at Y = 0.
+const TO_VIEWER = new Matrix4().set(
+  -1, 0, 0, 0.610,
+  0, 0, 1, 0.0963770269,
+  0, 1, 0, 0,
+  0, 0, 0, 1,
+)
 
 // ---------------------------------------------------------------------------
 // Small matrix / bounds helpers (column-major mat4 as number[16])
@@ -119,16 +110,7 @@ function worldBounds(node) {
       }
     }
   }
-  return { lo, hi, center: [0, 1, 2].map((k) => (lo[k] + hi[k]) / 2) }
-}
-
-/** Walk up to the nearest ancestor whose name isn't another `BodyN` placeholder. */
-function semanticGroup(node) {
-  for (let n = node.getParentNode(); n; n = n.getParentNode()) {
-    const name = norm(n.getName())
-    if (name && !/^body\d/.test(name)) return name
-  }
-  return null
+  return { lo, hi }
 }
 
 function fail(message, detail) {
@@ -156,61 +138,35 @@ console.log(`  source  ${(srcBytes.length / 1024).toFixed(0)} KB  ` +
   `${root.listNodes().length} nodes  ${root.listMeshes().length} meshes  ` +
   `${root.listMaterials().length} materials`)
 
-// dedup first, so identical accessors collapse before we touch anything.
-// keepUniqueNames is not optional: `Clear`, `Glossy - Black`, `Steel - Polished` and
-// `Black` are byte-identical apart from their names, and the runtime tells housings
-// from solar cells from the tail by exactly those names.
+// Preserve material and mesh names used by the viewer's part and material maps.
 await doc.transform(dedup({ keepUniqueNames: true }))
 
+const sceneRoots = new Set(root.listScenes().flatMap((scene) => scene.listChildren()))
+for (const node of sceneRoots) {
+  node.setMatrix(TO_VIEWER.clone().multiply(new Matrix4().fromArray(node.getMatrix())).toArray())
+}
 const meshNodes = root.listNodes().filter((n) => n.getMesh())
 const measured = new Map(meshNodes.map((n) => [n, worldBounds(n)]))
 
 const claimed = new Map() // node -> id
 const report = []
 
-for (const rule of RULES) {
-  const candidates = meshNodes.filter((n) => {
-    if (claimed.has(n)) return false
-    if (semanticGroup(n) !== rule.group) return false
-    return rule.where ? rule.where(measured.get(n), n.getName()) : true
-  })
-
-  const expected = rule.count ?? 1
-  if (candidates.length !== expected) {
-    fail(
-      `Part rule "${typeof rule.id === 'function' ? rule.id(0) + '…' : rule.id}" ` +
-        `matched ${candidates.length} nodes, expected ${expected}.`,
-      `     group: ${rule.group}\n` +
-        `     Fusion export probably renamed or re-split this part. Mesh nodes present:\n` +
-        meshNodes
-          .map((n) => `       ${n.getName().padEnd(14)} group=${semanticGroup(n)}` +
-            `  center=[${fmt(measured.get(n).center)}]`)
-          .join('\n'),
-    )
+for (const [id, sourceName] of Object.entries(RULES)) {
+  const candidates = meshNodes.filter((node) => node.getName().replace(/\.\d+$/, '') === sourceName)
+  if (candidates.length !== 1) {
+    fail(`Part "${id}" expected one "${sourceName}" node, found ${candidates.length}.`,
+      `     Mesh nodes: ${meshNodes.map((node) => node.getName()).join(', ')}`)
   }
-
-  // Deterministic ordering for multi-node rules: fore-to-aft, then across.
-  candidates.sort((a, b) => {
-    const ca = measured.get(a).center
-    const cb = measured.get(b).center
-    return ca[0] - cb[0] || ca[2] - cb[2]
-  })
-
-  candidates.forEach((node, i) => {
-    const id = typeof rule.id === 'function' ? rule.id(i) : rule.id
-    claimed.set(node, id)
-    report.push({ id, from: node.getName(), bounds: measured.get(node) })
-  })
+  const [node] = candidates
+  claimed.set(node, id)
+  report.push({ id, from: node.getName(), bounds: measured.get(node) })
 }
 
 const orphans = meshNodes.filter((n) => !claimed.has(n))
 if (orphans.length) {
   fail(
     `${orphans.length} mesh node(s) unclaimed by any part rule.`,
-    orphans
-      .map((n) => `       ${n.getName().padEnd(14)} group=${semanticGroup(n)}` +
-        `  center=[${fmt(measured.get(n).center)}]`)
-      .join('\n'),
+    orphans.map((n) => `       ${n.getName()}`).join('\n'),
   )
 }
 
@@ -240,9 +196,7 @@ await doc.transform(
   prune({ propertyTypes: [PropertyType.MATERIAL, PropertyType.ACCESSOR], keepLeaves: true }),
 )
 
-mkdirSync(OUT_DIR, { recursive: true })
 const outBytes = await io.writeBinary(doc)
-writeFileSync(OUT, outBytes)
 
 // ---------------------------------------------------------------------------
 // 3. Verify — re-open what we actually wrote
@@ -307,4 +261,6 @@ console.log(`  source     unchanged, ${srcBytes.length} bytes`)
 
 if (problems.length) fail(`Verification failed:`, problems.map((p) => `       ${p}`).join('\n'))
 
+mkdirSync(OUT_DIR, { recursive: true })
+writeFileSync(OUT, outBytes)
 console.log(`\n  ok  ->  public/boat.opt.glb\n`)

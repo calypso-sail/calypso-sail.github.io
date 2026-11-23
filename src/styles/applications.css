@@ -1,4 +1,4 @@
-/* Compact photo-led applications within Protosail's existing visual system. */
+/* Compact photo-led applications within Calypso's existing visual system. */
 .applications__head {
   display: grid;
   grid-template-columns: 1fr 1fr;

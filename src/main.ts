@@ -14,6 +14,7 @@
 
 import './styles/index.css'
 
+import { FLAGS } from './content.js'
 import { initHero } from './hero/hero.js'
 import { initScroll, lenis } from './lib/scroll.js'
 import { initApplications } from './sections/applications.js'
@@ -29,7 +30,7 @@ export const DEBUG = params.has('debug')
 if (DEBUG) document.documentElement.dataset.debug = ''
 
 renderContent()
-initTeamCards()
+if (FLAGS.SHOW_TEAM_PROFILES) initTeamCards()
 initScroll()
 initNav()
 initChallenge()

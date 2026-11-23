@@ -1,9 +1,9 @@
 {
-  "name": "protosail-website",
+  "name": "calypso-website",
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "Protosail — UCL Microtransat Challenge team website.",
+  "description": "Calypso — UCL Microtransat Challenge team website.",
   "engines": { "node": ">=22.12" },
   "scripts": {
     "predev": "node scripts/ensure-model.mjs",

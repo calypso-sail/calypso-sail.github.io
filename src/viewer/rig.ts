@@ -1,5 +1,5 @@
 /**
- * Turns three flat parts into three joints.
+ * Builds three joints around the axes measured from the processed model.
  *
  * The processed model has no hierarchy left — every part is a direct child of the scene
  * with its world transform baked in — which is exactly what makes this reliable: we drop
@@ -7,14 +7,14 @@
  * world transform, so the boat doesn't twitch), and from then on a joint is one
  * `rotation.y`.
  *
- * The tail pivot is a child of the wing pivot, because the trim tab is bolted to the
+ * The tail pivot is a child of the wing pivot, because the tail vane is mounted on the
  * wing assembly and swings with it. Its angle is therefore relative to the wing, which
  * is also how the real thing is instrumented.
  */
 
 import { AxesHelper, Group, Object3D } from 'three'
-import { JOINTS } from '../config/joints.js'
-import { WING_ASSEMBLY } from '../config/parts.js'
+import { clampDeflection, JOINTS } from '../config/joints.js'
+import { RUDDER_ASSEMBLY, TAIL_ASSEMBLY, WING_ASSEMBLY } from '../config/parts.js'
 import type { LoadedModel } from './model.js'
 
 export type FrameId = 'wing' | 'tail' | 'rudder' | 'hull'
@@ -62,10 +62,10 @@ export function createRig(model: LoadedModel): Rig {
 
   // Order matters: load the tail pivot while it's still at the root and at rest, then
   // nest the whole thing under the wing pivot.
-  tailPivot.attach(model.parts.tailVane)
+  for (const id of TAIL_ASSEMBLY) tailPivot.attach(model.parts[id])
   wingPivot.attach(tailPivot)
   for (const id of WING_ASSEMBLY) wingPivot.attach(model.parts[id])
-  rudderPivot.attach(model.parts.rudder)
+  for (const id of RUDDER_ASSEMBLY) rudderPivot.attach(model.parts[id])
 
   // `?debug` in the URL draws the three axes so they can be checked against the numbers
   // in config/joints.ts without opening a modelling package.
@@ -75,9 +75,6 @@ export function createRig(model: LoadedModel): Rig {
     pivot.add(helper)
     return helper
   })
-
-  const limitTab = JOINTS.tail.limitDeg
-  const limitRudder = JOINTS.rudder.limitDeg
 
   return {
     frame(id) {
@@ -111,8 +108,8 @@ export function createRig(model: LoadedModel): Rig {
 
     setAngles(wingDeg, tabDeg, rudderDeg) {
       wingPivot.rotation.y = wingDeg * DEG
-      tailPivot.rotation.y = clamp(tabDeg, limitTab) * DEG
-      rudderPivot.rotation.y = clamp(rudderDeg, limitRudder) * DEG
+      tailPivot.rotation.y = clampDeflection(tabDeg, 'tail') * DEG
+      rudderPivot.rotation.y = clampDeflection(rudderDeg, 'rudder') * DEG
     },
 
     setHelpersVisible(visible) {
@@ -126,8 +123,4 @@ export function createRig(model: LoadedModel): Rig {
       }
     },
   }
-}
-
-function clamp(value: number, limit: number | null): number {
-  return limit === null ? value : Math.max(-limit, Math.min(limit, value))
 }

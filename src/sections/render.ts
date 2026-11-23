@@ -4,8 +4,8 @@
  * markup out — no behaviour.
  */
 
-import { boat, news, team, type NewsItem, type PastBoat, type Person } from '../content.js'
-import { arrow, html, qs, setHtml, type Raw } from '../lib/dom.js'
+import { boat, FLAGS, news, team, type NewsItem, type PastBoat, type Person } from '../content.js'
+import { arrow, html, qs, qsa, setHtml, type Raw } from '../lib/dom.js'
 
 function tile(image: string | undefined, alt: string, caption?: Raw): Raw {
   return html`
@@ -97,9 +97,21 @@ export function newsStory(n: NewsItem, featured = false): Raw {
 export function renderContent(): void {
   setHtml(qs('[data-past]'), html`${boat.previous.map(pastBoat)}`)
 
-  setHtml(qs('[data-team="members"]'), html`${team.members.map(person)}`)
-  setHtml(qs('[data-team="supervisors"]'), html`${team.supervisors.map(person)}`)
-  setHtml(qs('[data-team="alumni"]'), html`${team.alumni.map(person)}`)
+  for (const element of qsa('[data-team-visibility]')) {
+    if (FLAGS.SHOW_TEAM_PROFILES) element.hidden = false
+    else element.remove()
+  }
+  if (FLAGS.SHOW_TEAM_PROFILES) {
+    for (const group of ['members', 'supervisors', 'alumni'] as const) {
+      setHtml(qs(`[data-team="${group}"]`), html`${team[group].map(person)}`)
+    }
+  }
+
+  for (const element of qsa('[data-news-visibility]')) {
+    if (FLAGS.SHOW_NEWS) element.hidden = false
+    else element.remove()
+  }
+  if (!FLAGS.SHOW_NEWS) return
 
   const [featuredNews, ...recentNews] = news
   setHtml(qs('[data-news]'), html`
@@ -112,5 +124,4 @@ export function renderContent(): void {
         `
       : ''}
   `)
-
 }

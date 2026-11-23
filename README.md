@@ -1,8 +1,9 @@
-# Protosail — website
+# Calypso — website
 
-Single-page site for Protosail, UCL's Microtransat Challenge team: a WebGL hero, the
+Single-page site for Calypso, UCL's Microtransat Challenge team: a WebGL hero, the
 challenge explained, an interactive 3D boat section built around a live wingsail
-simulation, and placeholder-first team, news and contact sections.
+simulation, boat galleries, team, contact and sponsors. Team profiles and news can
+be enabled when the content is ready.
 
 ```
 npm install
@@ -26,10 +27,9 @@ committed, so a fresh clone runs without the generator steps.
 
 ## Editing content
 
-Everything that is a fact about the team lives in `src/content.ts`: flags, team members,
-supervisors, alumni, news items, previous boats, stats, the rule coordinates and
-contact details. Prose that appears once — hero, challenge, boat introduction, contact —
-is in `index.html` so it reads without JavaScript.
+Feature flags, team profiles, news items, previous boats and the challenge route
+coordinates live in `src/content.ts`. The hero copy, race figures, current boats,
+contact details and sponsor logos are in `index.html`.
 
 Media is optional. A person with no `photo`, or a previous boat with no `image`, gets a
 placeholder tile. Drop a file into `public/` and set the path to switch. Everything that
@@ -39,6 +39,10 @@ outlined.
 Flags in `src/content.ts`:
 
 - `SMOOTH_SCROLL` — Lenis wheel smoothing (touch is always native).
+- `SHOW_TEAM_PROFILES` — set to `true` to restore the Team section, profile galleries and navigation links.
+- `SHOW_NEWS` — set to `true` to restore the homepage news and navigation links and enable `/news/`. While disabled, `/news/` redirects to the homepage.
+
+See [Restoring Team and News](RESTORE_TEAM_AND_NEWS.md) for the content, preview and deployment steps.
 
 ## URL switches
 
@@ -76,7 +80,7 @@ scripts/                   model pipeline, font sync, chart bake, screenshots
 const viewer = await createBoatViewer(element, { onProgress, reducedMotion, controls: { zoom: false } })
 viewer.setTourProgress(0.2)
 viewer.setInteractionMode('explore')
-viewer.sim.set({ tabDeg: 30 })
+viewer.sim.set({ tabDeg: 15 })
 ```
 
 `src/sections/boat.ts` maps the six chapters to continuous `setTourProgress(0…1)`.
@@ -111,29 +115,20 @@ waves & fog button lets the reader choose ocean, fog and boat motion explicitly.
 `npm run test:tour` checks boundaries, reverse paths, interrupted handoffs, Explore,
 portrait framing, reduced motion, touch policy and simulation restoration.
 
-### The model is a placeholder
+### Updating the model
 
-`boat.glb` is a wingsail demonstrator built by another team. It must be replaced before
-the site goes public. When Protosail's own hull is ready:
+`boat.glb` is Calypso's simplified full-boat export. `npm run model` maps its named
+meshes, converts its Z-up export frame to the viewer's Y-up frame, and verifies that
+optimisation preserves the pose. The resulting `public/boat.opt.glb` is the asset the
+site serves.
 
-1. Export it from Fusion and overwrite `boat.glb`.
-2. Update the `RULES` table in `scripts/process-model.mjs` (it fails loudly and prints every
-   node if anything is unmatched), then `npm run model`.
-3. Update `PART_IDS`, `WING_ASSEMBLY`, `XRAY_*`, `ELECTRONICS` and `HULL_EXTENT` in
-   `src/config/parts.ts`; the joint axes in `src/config/joints.ts`; the material readings in
-   `src/viewer/materials.ts`; the camera poses, captions, labels and dimensions in
-   `src/config/views.ts`.
-4. Check the rig with `?debug` (it draws the three joint axes).
+For a new export, confirm the source axes and part map in `scripts/process-model.mjs`
+and update the matching settings in `src/config/`. Run `npm run model` and
+`npm run test:tour`. Use `?debug` to see the three joint axes.
 
-The wingsail simulation (`src/viewer/sim.ts`) models a free-pivoting wing driven by a
-trim tab as a damped second-order system; see the comments there for the derivation.
+The simplified export omits the actuator hardware. The viewer rotates the free mast,
+tail vane and rudder, with the two driven surfaces bounded by their CAD travel limits.
 
-## Before publishing
-
-- Replace the placeholder model (above), or obtain permission to show it.
-- Fill in `src/content.ts`: names, bios, photos, news, previous boats, the real email.
-- Confirm the copy marked `data-placeholder` in `index.html`: entry year, class/division,
-  attempt count after 2023 (see microtransat.org/history.php).
 - Check UCL brand rules for student teams before adding any logo.
 
 Interface font: Archivo, SIL Open Font License (`public/fonts/LICENSES.txt`).

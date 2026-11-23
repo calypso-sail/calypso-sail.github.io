@@ -11,10 +11,14 @@
  */
 
 export const FLAGS = {
-  /** Show the (placeholder) boat as a ghost render in the hero. */
+  /** Show the boat as a ghost render in the hero. */
   HERO_BOAT: false,
   /** Smooth wheel scrolling (Lenis). Touch scrolling is always native. */
   SMOOTH_SCROLL: true,
+  /** Show the Team section and its navigation links. */
+  SHOW_TEAM_PROFILES: false,
+  /** Show news on the homepage and enable the news archive. */
+  SHOW_NEWS: false,
 } as const
 
 export interface Person {
@@ -48,12 +52,10 @@ export interface PastBoat {
 }
 
 export const site = {
-  name: 'Protosail',
+  name: 'Calypso',
   org: 'University College London',
   short: 'UCL · Microtransat',
   year: 2026,
-  /** [placeholder] confirm with the team. */
-  email: 'team@protosail.example',
   microtransat: 'https://www.microtransat.org/',
 } as const
 
@@ -92,19 +94,19 @@ export const boat = {
       name: 'Prototype 01',
       note: 'Canal testing',
       image: `${import.meta.env.BASE_URL}images/prototypes/prototype-0.webp`,
-      alt: 'An early Protosail prototype being tested on a canal',
+      alt: 'An early Calypso prototype being tested on a canal',
     },
     {
       name: 'Prototype 02',
       note: 'Lake testing',
       image: `${import.meta.env.BASE_URL}images/prototypes/prototype-1.webp`,
-      alt: 'The Protosail team beside a prototype sailboat at a lake',
+      alt: 'The Calypso team beside a prototype sailboat at a lake',
     },
     {
       name: 'Prototype 03',
       note: 'Previous team and boat',
       image: `${import.meta.env.BASE_URL}images/prototypes/prototype-2.jpeg`,
-      alt: 'The Protosail team standing with a yellow and black prototype sailboat',
+      alt: 'The Calypso team standing with a yellow and black prototype sailboat',
     },
   ] as readonly PastBoat[],
 } as const
@@ -158,7 +160,7 @@ export const team = {
     {
       name: 'Alumnus 01',
       index: '09',
-      bio: 'Contributed design knowledge, test evidence, and lessons from an earlier Protosail development cycle. Their documented experiments and hard-won practical insight give the current team a stronger starting point, preventing repeated mistakes and preserving continuity as each new cohort takes over.',
+      bio: 'Contributed design knowledge, test evidence, and lessons from an earlier Calypso development cycle. Their documented experiments and hard-won practical insight give the current team a stronger starting point, preventing repeated mistakes and preserving continuity as each new cohort takes over.',
     },
     {
       name: 'Alumnus 02',
@@ -180,7 +182,7 @@ export const news: readonly NewsItem[] = [
     summary: 'One line on what happened and why it matters.',
     href: '#news',
     image: `${import.meta.env.BASE_URL}images/prototypes/prototype-2.jpeg`,
-    imageAlt: 'The Protosail team with a previous autonomous sailboat',
+    imageAlt: 'The Calypso team with a previous autonomous sailboat',
   },
   {
     date: '2026-08',
@@ -188,7 +190,7 @@ export const news: readonly NewsItem[] = [
     summary: 'One line on what happened and why it matters.',
     href: '#news',
     image: `${import.meta.env.BASE_URL}images/prototypes/prototype-0.webp`,
-    imageAlt: 'An early Protosail prototype during canal testing',
+    imageAlt: 'An early Calypso prototype during canal testing',
   },
   {
     date: '2026-07',

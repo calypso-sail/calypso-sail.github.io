@@ -2,7 +2,8 @@ import assert from 'node:assert/strict'
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import ts from 'typescript'
-import { PerspectiveCamera, TOUCH, Vector3 } from 'three'
+import { Box3, PerspectiveCamera, TOUCH, Vector3 } from 'three'
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 
 // Compile the real TS modules in memory. No generated files or browser globals.
 const modules = new Map()
@@ -25,8 +26,12 @@ async function moduleUrl(filename) {
 }
 const { sampleTour, interpolatePose } = await import(await moduleUrl('src/viewer/tour.ts'))
 const { createCameraRig } = await import(await moduleUrl('src/viewer/camera.ts'))
+const { createRig } = await import(await moduleUrl('src/viewer/rig.ts'))
 const { createSim } = await import(await moduleUrl('src/viewer/sim.ts'))
 const { VIEWS } = await import(await moduleUrl('src/config/views.ts'))
+const { JOINTS } = await import(await moduleUrl('src/config/joints.ts'))
+const { PART_IDS, RUDDER_ASSEMBLY, TAIL_ASSEMBLY, WING_ASSEMBLY } =
+  await import(await moduleUrl('src/config/parts.ts'))
 const near = (a, b) => assert.ok(Math.abs(a - b) < 1e-8, `${a} ≠ ${b}`)
 const vectorNear = (a, b) => a.forEach((v, i) => near(v, b[i]))
 
@@ -126,13 +131,66 @@ still.dispose()
 const sim = createSim()
 sim.suggest(VIEWS[1].sim)
 sim.set({ auto: false, windDeg: 135, tabDeg: -30, rudderDeg: -35 })
+assert.equal(sim.inputs.tabDeg, JOINTS.tail.minDeg)
+assert.equal(sim.inputs.rudderDeg, JOINTS.rudder.minDeg)
 sim.suggest(VIEWS[2].sim)
 assert.equal(sim.inputs.windDeg, 135, 'Explore preserves reader settings')
 sim.set({ auto: true })
 sim.suggest(VIEWS[1].sim)
 sim.settle()
-assert.equal(sim.state.tabDeg, 20)
+assert.equal(sim.state.tabDeg, JOINTS.tail.maxDeg)
 assert.equal(sim.state.rudderDeg, 0)
 assert.equal(sim.state.windDeg, 0)
 
-console.log('Tour checks passed: six chapters, bounds, reading intervals, reverse paths, current-position handoffs, Explore, portrait fit, reduced motion, touch policy and simulation restoration.')
+// Exercise the rig against the delivered GLB. Bounds of the cylindrical parts
+// identify the geometric axes independently of the authored pivot positions.
+const bytes = await fs.readFile('public/boat.opt.glb')
+const { scene: root } = await new GLTFLoader().parseAsync(
+  bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength), '')
+const parts = Object.fromEntries(PART_IDS.map(id => {
+  const part = root.getObjectByName(id)
+  assert.ok(part, `Expected ${id} in boat.opt.glb`)
+  return [id, part]
+}))
+root.updateMatrixWorld(true)
+const rest = new Map(PART_IDS.map(id => [id, parts[id].matrixWorld.toArray()]))
+const boatRig = createRig({ root, parts })
+root.updateMatrixWorld(true)
+for (const id of PART_IDS) vectorNear(parts[id].matrixWorld.toArray(), rest.get(id))
+
+for (const [id, shaft, attached] of [
+  ['wing', 'mast', WING_ASSEMBLY],
+  ['tail', 'tailPin', TAIL_ASSEMBLY],
+  ['rudder', 'rudderStock', RUDDER_ASSEMBLY],
+]) {
+  const pivot = boatRig.frame(id)
+  const centre = new Box3().setFromObject(parts[shaft], true).getCenter(new Vector3())
+  const axis = pivot.getWorldPosition(new Vector3())
+  assert.ok(Math.hypot(centre.x - axis.x, centre.z - axis.z) < 0.0001, `${id} pivot is centred on its shaft`)
+  for (const part of attached) assert.equal(parts[part].parent, pivot)
+}
+assert.equal(boatRig.frame('tail').parent, boatRig.frame('wing'))
+
+boatRig.setAngles(0, 100, -100)
+root.updateMatrixWorld(true)
+assert.notDeepEqual(parts.tailVane.matrixWorld.toArray(), rest.get('tailVane'))
+assert.notDeepEqual(parts.rudderBlade.matrixWorld.toArray(), rest.get('rudderBlade'))
+vectorNear(parts.tailPin.matrixWorld.toArray(), rest.get('tailPin'))
+vectorNear(parts.hull.matrixWorld.toArray(), rest.get('hull'))
+const radians = Math.PI / 180
+near(boatRig.frame('tail').rotation.y, JOINTS.tail.maxDeg * radians)
+near(boatRig.frame('rudder').rotation.y, JOINTS.rudder.minDeg * radians)
+const tailBefore = parts.tailVane.matrixWorld.toArray()
+boatRig.setAngles(90, 100, -100)
+root.updateMatrixWorld(true)
+assert.notDeepEqual(parts.tailVane.matrixWorld.toArray(), tailBefore, 'The tail rides the wing')
+boatRig.atRest(() => {
+  for (const id of PART_IDS) vectorNear(parts[id].matrixWorld.toArray(), rest.get(id))
+})
+near(boatRig.frame('wing').rotation.y, Math.PI / 2)
+boatRig.setAngles(-90, -100, 100)
+near(boatRig.frame('tail').rotation.y, JOINTS.tail.minDeg * radians)
+near(boatRig.frame('rudder').rotation.y, JOINTS.rudder.maxDeg * radians)
+boatRig.dispose()
+
+console.log('Tour checks passed: six chapters, reversible camera paths, Explore, portrait fit, reduced motion, and the delivered model’s three joints and travel limits.')

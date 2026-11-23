@@ -139,8 +139,6 @@
   justify-content: center;
   padding-block: calc(var(--nav-h) + 5rem) 10rem;
 }
-.hero__top { margin-bottom: 2rem; }
-.hero__top .eyebrow { color: #b7c5cc; }
 .hero__body { display: grid; justify-items: start; gap: 1.8rem; }
 .hero__title {
   max-width: none;
@@ -159,7 +157,6 @@
 @media (min-width: 1800px) { .hero__inner { padding-bottom: 12rem; } }
 @media (min-width: 860px) and (max-height: 700px) {
   .hero__inner { padding-block: calc(var(--nav-h) + 1rem) 5rem; }
-  .hero__top { margin-bottom: clamp(1.25rem, 3svh, 2rem); }
   .hero__body { gap: clamp(1.25rem, 2.8svh, 1.8rem); }
   .hero__title { font-size: clamp(3.4rem, min(7.4vw, 12.5svh), 7.75rem); }
   .hero__lead { font-size: clamp(1rem, 1.35vw, 1.125rem); line-height: 1.45; }
@@ -177,7 +174,6 @@
 }
 @media (max-width: 559px) {
   .hero__inner { padding-top: calc(var(--nav-h) + 3.75rem); }
-  .hero__top { margin-bottom: clamp(2.75rem, 5.5svh, 3.25rem); }
   .hero__title { font-size: clamp(2.35rem, 10.1vw, 3.6rem); }
   .hero__line:first-child { max-width: 10ch; }
   .hero__line--dim { max-width: 12ch; margin-top: .12em; }
@@ -194,7 +190,6 @@
 
 @media (max-width: 859px) and (max-height: 620px) {
   .hero__inner { padding-top: calc(var(--nav-h) + 1rem); }
-  .hero__top { margin-bottom: .75rem; }
   .hero__body { gap: .75rem; }
   .hero__title { font-size: clamp(2rem, min(9.5vw, 5.6svh), 3rem); }
   .hero__lead { font-size: 1rem; line-height: 1.4; max-width: 34ch; }

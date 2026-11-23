@@ -19,7 +19,7 @@ import {
   TAB_SLEW,
   WING_OMEGA,
   WING_ZETA,
-  JOINTS,
+  clampDeflection,
 } from '../config/joints.js'
 
 export interface SimInputs {
@@ -29,11 +29,11 @@ export interface SimInputs {
    * model's rest pose.
    */
   windDeg: number
-  /** Commanded trim tab angle, degrees, relative to the wing. */
+  /** Commanded tail vane angle, degrees, relative to the wing. */
   tabDeg: number
   /** Commanded rudder angle, degrees. */
   rudderDeg: number
-  /** Let the wind wander and the servos work on their own. */
+  /** Let the wind and actuator commands vary on their own. */
   auto: boolean
 }
 
@@ -67,16 +67,9 @@ export interface Sim {
   tick(dt: number): void
 }
 
-const TAB_LIMIT = JOINTS.tail.limitDeg ?? 30
-const RUDDER_LIMIT = JOINTS.rudder.limitDeg ?? 35
-
 /** Shortest signed difference between two headings, in degrees. */
 function wrap180(deg: number): number {
   return deg - 360 * Math.round(deg / 360)
-}
-
-function clamp(value: number, limit: number): number {
-  return Math.max(-limit, Math.min(limit, value))
 }
 
 function approach(current: number, target: number, maxStep: number): number {
@@ -120,10 +113,10 @@ export function createSim(options: { reducedMotion?: boolean } = {}): Sim {
     )
   }
   function autoTab(t: number): number {
-    return 17 * Math.sin(t * 0.089 + 2.2) + 9 * Math.sin(t * 0.211 + 0.9)
+    return 5 + 10 * Math.sin(t * 0.089 + 2.2) + 5 * Math.sin(t * 0.211 + 0.9)
   }
   function autoRudder(t: number): number {
-    return 14 * Math.sin(t * 0.061 + 1.1) + 6 * Math.sin(t * 0.157 + 2.6)
+    return 9.8 + 10 * Math.sin(t * 0.061 + 1.1) + 4.3 * Math.sin(t * 0.157 + 2.6)
   }
 
   /** The heading the wing is trying to reach, given the wind and where the tab is. */
@@ -136,18 +129,16 @@ export function createSim(options: { reducedMotion?: boolean } = {}): Sim {
     return autoWind(clock)
   }
   function commandedTab(): number {
-    if (!inputs.auto || options.reducedMotion) return clamp(inputs.tabDeg, TAB_LIMIT)
-    return clamp(autoTab(clock), TAB_LIMIT)
+    return clampDeflection(!inputs.auto || options.reducedMotion ? inputs.tabDeg : autoTab(clock), 'tail')
   }
   function commandedRudder(): number {
-    if (!inputs.auto || options.reducedMotion) return clamp(inputs.rudderDeg, RUDDER_LIMIT)
-    return clamp(autoRudder(clock), RUDDER_LIMIT)
+    return clampDeflection(!inputs.auto || options.reducedMotion ? inputs.rudderDeg : autoRudder(clock), 'rudder')
   }
 
   function assign(patch: Partial<SimInputs>) {
     Object.assign(inputs, patch)
-    inputs.tabDeg = clamp(inputs.tabDeg, TAB_LIMIT)
-    inputs.rudderDeg = clamp(inputs.rudderDeg, RUDDER_LIMIT)
+    inputs.tabDeg = clampDeflection(inputs.tabDeg, 'tail')
+    inputs.rudderDeg = clampDeflection(inputs.rudderDeg, 'rudder')
   }
 
   function publish() {

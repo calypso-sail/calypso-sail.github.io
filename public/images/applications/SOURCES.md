@@ -1,6 +1,6 @@
 # Application imagery
 
-These illustrations are artistic depth-map interpretations of online photographs, edited with the built-in OpenAI image generation tool. They are not measured depth data or photographs of Protosail deployments. JPEGs are 1536 × 1024, exported at quality 88. Source photos, full-resolution generated PNGs and exact prompts are retained in `output/application-sources/`.
+These illustrations are artistic depth-map interpretations of online photographs, edited with the built-in OpenAI image generation tool. They are not measured depth data or photographs of Calypso deployments. JPEGs are 1536 × 1024, exported at quality 88. Source photos, full-resolution generated PNGs and exact prompts are retained in `output/application-sources/`.
 
 | Asset | Original photograph | Photographer |
 | --- | --- | --- |

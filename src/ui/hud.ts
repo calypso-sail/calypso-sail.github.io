@@ -18,7 +18,7 @@ const ROWS = [
   { key: 'wind', label: 'Wind', hint: 'apparent, off the bow' },
   { key: 'wing', label: 'Wing', hint: 'heading in the boat’s frame' },
   { key: 'aoa', label: 'α', hint: 'angle of attack the tab is holding' },
-  { key: 'tab', label: 'Tab', hint: 'trim tab deflection' },
+  { key: 'tab', label: 'Vane', hint: 'tail vane deflection' },
   { key: 'rudder', label: 'Rudder', hint: 'rudder angle' },
 ] as const
 

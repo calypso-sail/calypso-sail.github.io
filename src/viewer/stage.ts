@@ -56,8 +56,7 @@ export function createStage(container: HTMLElement): Stage {
   container.appendChild(canvas)
 
   const scene = new Scene()
-  // A tight near/far pair matters here: the solar panels stack a cell field 0.1 mm under
-  // a windowed frame, which z-fights on a loose depth range.
+  // Keep depth precision for the closely spaced cell field and backing sheet.
   const camera = new PerspectiveCamera(34, 1, 0.08, 60)
   camera.position.set(-2.05, 1.24, 2.28)
 

@@ -21,7 +21,6 @@ export function initBoatSection(options: { debug?: boolean } = {}): BoatSection 
       <div class="step__copy">
         <h3 class="h3">${view.label}</h3>
         <p class="step__body">${view.caption}</p>
-        ${view.detail ? html`<p class="step__detail">${view.detail}</p>` : ''}
       </div>
     </article>`)}`)
   setHtml(railEl, html`<ol>${chapters.map(view => html`

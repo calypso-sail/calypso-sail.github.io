@@ -39,16 +39,15 @@
 .step { min-height: 100svh; display: flex; align-items: center; padding-block: 10rem; scroll-margin-top: 0; }
 @media (min-width: 860px) {
   .step:first-child { align-items: flex-start; padding-top: clamp(4rem, 8svh, 6rem); }
+  /* Hold the final view before releasing the sticky stage, after the chapter copy. */
+  .scrolly__steps { padding-bottom: 100svh; }
 }
-/* Give the final camera position a full reading beat before the sticky stage releases. */
-.step:last-child { min-height: 200svh; }
 .step:focus-visible { outline: none; }
 .step:focus-visible .h3 { outline: 2px solid var(--accent); outline-offset: 8px; border-radius: 0; }
 .step__copy { display: grid; gap: 1.5rem; pointer-events: auto; opacity: .22; transition: opacity 250ms ease; }
 .step.is-active .step__copy { opacity: 1; }
 .step .h3 { font-size: clamp(2rem, 3vw, 3.25rem); font-weight: 450; letter-spacing: -.035em; }
 .step__body { max-width: 33ch; color: var(--ink-2); font-size: 1.125rem; line-height: 1.55; }
-.step__detail { max-width: 35ch; color: var(--ink-2); font-size: .875rem; line-height: 1.65; }
 .is-unavailable + .scrolly__steps .step__copy { opacity: 1; }
 @media (max-width: 859px) {
   .scrolly { --stage-height: clamp(220px, 36svh, 360px); }

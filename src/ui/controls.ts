@@ -1,9 +1,9 @@
 /**
- * The three things you can actually do: point the wind somewhere, deflect the trim tab,
+ * The three things you can actually do: point the wind somewhere, deflect the tail vane,
  * put the rudder over.
  *
  * These are real controls — a slider role with keyboard support on the dial, native
- * range inputs for the servos — because "drag this" is the whole argument the page is
+ * range inputs for the actuators — because "drag this" is the whole argument the page is
  * making and it shouldn't be mouse-only. Every interaction drops AUTO, and AUTO puts it
  * back; nothing here writes a joint angle directly, it all goes through the simulation.
  */
@@ -17,9 +17,6 @@ export interface ControlPanel {
   setFocus(control: 'wind' | 'tab' | 'rudder' | undefined): void
   dispose(): void
 }
-
-const TAB_LIMIT = JOINTS.tail.limitDeg ?? 30
-const RUDDER_LIMIT = JOINTS.rudder.limitDeg ?? 35
 
 // Round before wrapping, or 359.7° prints as "360".
 const bearing = (deg: number) => String(((Math.round(deg) % 360) + 360) % 360).padStart(3, '0')
@@ -56,13 +53,13 @@ export function createControls(sim: Sim): ControlPanel {
       </div>
       <div class="sliders">
         <div class="slider" data-control="tab">
-          <label class="slider-label" for="ctl-tab">Trim tab</label>
-          <input id="ctl-tab" type="range" min="${-TAB_LIMIT}" max="${TAB_LIMIT}" step="0.5" value="0" />
+          <label class="slider-label" for="ctl-tab">Tail vane</label>
+          <input id="ctl-tab" type="range" min="${JOINTS.tail.minDeg}" max="${JOINTS.tail.maxDeg}" step="0.5" value="0" />
           <output class="slider-value" for="ctl-tab">0&deg;</output>
         </div>
         <div class="slider" data-control="rudder">
           <label class="slider-label" for="ctl-rudder">Rudder</label>
-          <input id="ctl-rudder" type="range" min="${-RUDDER_LIMIT}" max="${RUDDER_LIMIT}" step="0.5" value="0" />
+          <input id="ctl-rudder" type="range" min="${JOINTS.rudder.minDeg}" max="${JOINTS.rudder.maxDeg}" step="any" value="0" />
           <output class="slider-value" for="ctl-rudder">0&deg;</output>
         </div>
       </div>
@@ -146,7 +143,7 @@ export function createControls(sim: Sim): ControlPanel {
   }
   dial.addEventListener('keydown', onDialKey)
 
-  // --- servos --------------------------------------------------------------
+  // --- actuators -----------------------------------------------------------
   const onTab = () => {
     takeControl()
     sim.set({ tabDeg: Number(tab.value) })

@@ -1,7 +1,6 @@
 /**
- * The boat in the hero: the same geometry the viewer uses, drawn as a fresnel ghost
- * riding the sea. It is a placeholder for the real hull, so it is deliberately not a
- * product render — a translucent, drawn-through silhouette that reads as "prototype".
+ * The boat in the hero uses a simplified subset of the viewer geometry, drawn as
+ * a translucent ghost riding the sea.
  *
  * Geometry is shared by reference with the viewer (each renderer uploads its own GPU
  * copy); the rest-pose matrices come from the snapshot fetchModel() takes at parse time,
@@ -12,7 +11,7 @@ import { Group, Matrix4, Mesh, Vector3 } from 'three'
 import { JOINTS } from '../config/joints.js'
 import { WING_ASSEMBLY } from '../config/parts.js'
 import { createGhostMaterial } from '../viewer/materials.js'
-import { fetchModel } from '../viewer/model.js'
+import { fetchHeroBoatMeshes } from './boatMeshes.js'
 import type { Ocean } from './ocean.js'
 import { sampleHeight } from './waves.js'
 
@@ -31,7 +30,7 @@ const OPACITY = 0.68
 const FOLLOW = 0.3
 
 export async function mountGhostBoat(ocean: Ocean, copy: HTMLElement): Promise<void> {
-  const { rest } = await fetchModel()
+  const rest = await fetchHeroBoatMeshes()
   if (ocean.disposed) return
 
   // The sea occludes the keel and troughs: the silhouette belongs in the water.
