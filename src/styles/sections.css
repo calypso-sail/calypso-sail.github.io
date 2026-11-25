@@ -771,7 +771,7 @@ html[data-motion='reduce'] .challenge__globe::before { display: none; }
 
 .sponsors__list {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   max-width: 60rem;
   margin-top: var(--s-6);
   margin-inline: auto;
@@ -793,6 +793,26 @@ html[data-motion='reduce'] .challenge__globe::before { display: none; }
   width: min(100%, 10rem);
   height: clamp(1.375rem, 4vw, 2.625rem);
   object-fit: contain;
+}
+
+.sponsors__list .sponsors__logo--easy-composites {
+  height: auto;
+  padding: 0.375rem 0.5rem;
+  background: #fff;
+}
+
+@media (max-width: 599px) {
+  .sponsors__list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .sponsors__list li:nth-child(odd) {
+    border-left: 0;
+  }
+
+  .sponsors__list li:nth-child(n + 3) {
+    border-top: 1px solid var(--line);
+  }
 }
 
 /* --- footer ----------------------------------------------------------------- */
